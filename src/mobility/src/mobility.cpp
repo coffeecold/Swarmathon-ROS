@@ -167,11 +167,6 @@ void mobilityStateMachine(const ros::TimerEvent&) {
 						goalLocation.x = 0.0;
 						goalLocation.y = 0.0;
 					}
-					//Otherwise, reset target and select new random uniform heading
-					else {
-						targetDetected.data = -1;
-						goalLocation.theta = rng->uniformReal(0, 2 * M_PI);
-					}
 				}
 				//Otherwise, assign a new goal
 				else {
@@ -264,6 +259,9 @@ void targetHandler(const shared_messages::TagsImage::ConstPtr& message) {
 			//publish to scoring code
 			targetDropOffPublish.publish(message->image);
 			targetDetected.data = -1;
+			
+			//select new random uniform heading
+			goalLocation.theta = rng->uniformReal(0, 2 * M_PI);
 	    }
 	}
 
