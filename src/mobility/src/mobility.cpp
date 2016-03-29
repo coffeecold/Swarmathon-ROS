@@ -33,6 +33,7 @@ void setVelocity(double linearVel, double angularVel);
 //Numeric Variables
 geometry_msgs::Pose2D currentLocation;
 geometry_msgs::Pose2D goalLocation;
+geometry_msgs::Pose2D collectionZoneLocation;
 int currentMode = 0;
 float mobilityLoopTimeStep = 0.1; //time between the mobility loop calls
 float status_publish_interval = 5;
@@ -95,6 +96,10 @@ int main(int argc, char **argv) {
     goalLocation.theta = rng->uniformReal(0, 2 * M_PI); //set initial random heading
     
     targetDetected.data = -1; //initialize target detected
+    
+    //initialize location of collection zone (this will change as sensors drift)                                                                                                                                                              
+    collectionZoneLocation.x = 0.0;
+    collectionZoneLocation.y = 0.0;
     
     //select initial search position 50 cm from center (0,0)
 	goalLocation.x = 0.5 * cos(goalLocation.theta);
@@ -159,13 +164,13 @@ void mobilityStateMachine(const ros::TimerEvent&) {
 				//If returning with a target
 				else if (targetDetected.data != -1) {
 					//If goal has not yet been reached
-					if (hypot(0.0 - currentLocation.x, 0.0 - currentLocation.y) > 0.5) {
+					if (hypot(collectionZoneLocation.x - currentLocation.x, collectionZoneLocation.y - currentLocation.y) > 0.5) {
 				        //set angle to center as goal heading
 						goalLocation.theta = M_PI + atan2(currentLocation.y, currentLocation.x);
 						
 						//set center as goal position
-						goalLocation.x = 0.0;
-						goalLocation.y = 0.0;
+						goalLocation.x = collectionZoneLocation.x;
+						goalLocation.y = collectionZoneLocation.y;
 					}
 				}
 				//Otherwise, assign a new goal
@@ -260,6 +265,10 @@ void targetHandler(const shared_messages::TagsImage::ConstPtr& message) {
 			targetDropOffPublish.publish(message->image);
 			targetDetected.data = -1;
 			
+			//update location of collection zone                                                                                                                                                                                  
+            collectionZoneLocation.x = currentLocation.x;
+            collectionZoneLocation.y = currentLocation.y;
+			
 			//select new random uniform heading
 			goalLocation.theta = rng->uniformReal(0, 2 * M_PI);
 	    }
@@ -277,8 +286,8 @@ void targetHandler(const shared_messages::TagsImage::ConstPtr& message) {
 			goalLocation.theta = M_PI + atan2(currentLocation.y, currentLocation.x);
 			
 			//set center as goal position
-			goalLocation.x = 0.0;
-			goalLocation.y = 0.0;
+			goalLocation.x = collectionZoneLocation.x;
+			goalLocation.y = collectionZoneLocation.y;
 			
 			//publish detected target
 			targetCollectedPublish.publish(targetDetected);
